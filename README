@@ -1,0 +1,9 @@
+http cookie sniffer in python and libpcap
+
+
+You should install python-libpcap
+
+
+Usage :
+    # python cookie_sniffer.py IFACE >> outputfile
+
