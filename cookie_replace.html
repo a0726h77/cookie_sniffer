@@ -1,0 +1,31 @@
+<html>
+<head>
+<script>
+
+function saveCookie()
+{
+	host = document.getElementById("cookieHost").value;
+	url = document.getElementById("cookieProto").value + host + '/';
+	cookieContent = document.getElementById("cookieContent").value;
+
+	netscape.security.PrivilegeManager.enablePrivilege('UniversalXPConnect');
+	var cookieUri = Components.classes["@mozilla.org/network/io-service;1"].getService(Components.interfaces.nsIIOService).newURI(url, null, null); 
+	var cookieSvc = Components.classes["@mozilla.org/cookieService;1"].getService(Components.interfaces.nsICookieService);
+
+	cookieContentArr = cookieContent.split(";");
+	for ( var i = 0; i < cookieContentArr.length; i++)
+	{
+		cookieSvc.setCookieString(cookieUri, null, cookieContentArr[i] + ((document.getElementById('cookieInDomain').checked) ? ';domain=.' + cookieUri.host : ''), null);
+	}
+}
+
+</script>
+</head>
+<body>
+<table>
+	<tr><td>url</td><td><select id="cookieProto"><option value="http://">http</option></select><input type="text" id="cookieHost" size="44"><input type="checkbox" id="cookieInDomain">InTheDomain?</td></tr>
+	<tr><td>name/value</td><td><textarea  id="cookieContent" cols="44" rows="6"></textarea></td></tr>
+	<tr><td></td><td align="right"><input type="submit" onclick="saveCookie()"></td></tr>
+</table>
+</body>
+</html>

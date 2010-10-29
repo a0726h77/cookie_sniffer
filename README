@@ -1,9 +1,12 @@
 http cookie sniffer in python and libpcap
 
 
-You should install python-libpcap
+You must install python-libpcap
 
 
-Usage :
+Sniff :
     # python cookie_sniffer.py IFACE >> outputfile
 
+
+To replace cookies:
+    $ firefox cookie_replace.html
