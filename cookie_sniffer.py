@@ -79,7 +79,8 @@ if __name__=='__main__':
     if len(sys.argv) == 2:
         p = pcap.pcapObject()
         dev = sys.argv[1]
-        net, mask = pcap.lookupnet(dev)
+        # comment follow line for open monitor device
+        #net, mask = pcap.lookupnet(dev)
         p.open_live(dev, 1600, 0, 100)
         filter_string = 'port 80'
         p.setfilter(filter_string, 0, 0)
