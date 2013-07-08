@@ -9,6 +9,7 @@ function saveCookie()
 	cookieContent = document.getElementById("cookieContent").value;
 
 	netscape.security.PrivilegeManager.enablePrivilege('UniversalXPConnect');
+	//netscape.security.PrivilegeManager.enablePrivilege("UniversalPreferencesRead UniversalPreferencesWrite");
 	var cookieUri = Components.classes["@mozilla.org/network/io-service;1"].getService(Components.interfaces.nsIIOService).newURI(url, null, null); 
 	var cookieSvc = Components.classes["@mozilla.org/cookieService;1"].getService(Components.interfaces.nsICookieService);
 
