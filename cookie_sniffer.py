@@ -3,12 +3,9 @@
 import pcap
 import sys
 import string
-import time
 import socket
 import struct
-import binascii
 import re
-import os
 import datetime
 
 protocols = {socket.IPPROTO_TCP: 'tcp',
@@ -38,13 +35,20 @@ def decode_ip_packet(s):
     return d
 
 
+# def dumphex(s):
+#     bytes = map(lambda x: '%.2x' % x, map(ord, s))
+#     for i in xrange(0, len(bytes) / 16):
+#         print '    %s' % string.join(bytes[i * 16:(i + 1) * 16], ' ')
+#     print '    %s' % string.join(bytes[(i + 1) * 16:], ' ')
+
+
 class myhttpdump():
     def __init__(self):
         self.header_host = ''
         self.header_cookie = ''
 
-    def dumphex(self, s):
-        bytes = map(lambda x: '%.2x' % x, map(ord, s))
+    def dumphex(self, decoded):
+        bytes = map(lambda x: '%.2x' % x, map(ord, decoded['data']))
 
         strings = ''
         for i in bytes:
@@ -53,17 +57,18 @@ class myhttpdump():
         # if 'Host' in string:
         #     print string
 
-        re_host = re.compile(r"(Host: .*)")
-        re_cookie = re.compile(r"(Cookie: .*)")
+        re_host = re.compile(r"Host: (.*)")
+        re_cookie = re.compile(r"Cookie: (.*)")
 
         # for data in binascii.unhexlify(''.join(bytes[0:len(bytes)])).split('\r\n'):
         for data in strings.split('\r\n'):
             if re_host.search(data):
-                self.header_host = re_host.search(data).group(0)
+                self.header_host = re_host.search(data).group(1)
             elif re_cookie.search(data):
-                self.header_cookie = re_cookie.search(data).group(0)
-                print datetime.datetime.now().strftime("%Y/%m/%d/ %H:%M:%S")
-                print self.header_host + '\n' + self.header_cookie + '\n\n'
+                self.header_cookie = re_cookie.search(data).group(1)
+                print '%s [%s > %s]' % (datetime.datetime.now().strftime("%Y/%m/%d %H:%M:%S"), decoded['source_address'], decoded['destination_address'])
+                print 'Host: %s' % self.header_host
+                print 'Cookie: %s\n\n' % self.header_cookie
 
 
 def print_packet(pktlen, data, timestamp):
@@ -78,9 +83,10 @@ def print_packet(pktlen, data, timestamp):
         #   print '  protocol: %s' % protocols[decoded['protocol']]
         #   print '  header checksum: %d' % decoded['checksum']
         #   print '  data:'
+        #    dumphex(decoded['data'])
 
         http = myhttpdump()
-        http.dumphex(decoded['data'])
+        http.dumphex(decoded)
 
 
 if __name__ == '__main__':
