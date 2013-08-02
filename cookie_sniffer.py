@@ -2,7 +2,6 @@
 
 import pcap
 import sys
-import string
 import socket
 import struct
 import re
@@ -66,9 +65,10 @@ class myhttpdump():
                 self.header_host = re_host.search(data).group(1)
             elif re_cookie.search(data):
                 self.header_cookie = re_cookie.search(data).group(1)
-                print '%s [%s > %s]' % (datetime.datetime.now().strftime("%Y/%m/%d %H:%M:%S"), decoded['source_address'], decoded['destination_address'])
-                print 'Host: %s' % self.header_host
-                print 'Cookie: %s\n\n' % self.header_cookie
+
+                _datetime = datetime.datetime.now().strftime("%Y/%m/%d %H:%M:%S")
+
+                return {'src_ip': decoded['source_address'], 'dest_ip': decoded['destination_address'], 'host': self.header_host, 'cookie': self.header_cookie, 'datetime': _datetime}
 
 
 def print_packet(pktlen, data, timestamp):
@@ -86,7 +86,13 @@ def print_packet(pktlen, data, timestamp):
         #    dumphex(decoded['data'])
 
         http = myhttpdump()
-        http.dumphex(decoded)
+        http_decoded = http.dumphex(decoded)
+
+        if http_decoded:
+            d = http_decoded
+            print '%s [%s > %s]' % (d['datetime'], d['src_ip'], d['dest_ip'])
+            print 'Host: %s' % d['host']
+            print 'Cookie: %s\n\n' % d['cookie']
 
 
 if __name__ == '__main__':
